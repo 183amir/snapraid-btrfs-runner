@@ -93,8 +93,14 @@ def snapraid_btrfs_command(command, *, snapraid_args={}, snapraid_btrfs_args={},
         snapraid_arguments = ["--quiet"]
     for (k, v) in snapraid_args.items():
         snapraid_arguments.extend(["--" + k, str(v)])
+    # Construct the full command
+    full_command = [config["snapraid-btrfs"]["executable"]] + snapraid_btrfs_arguments + [command] + snapraid_arguments
+
+    # Log the command being executed
+    logging.info("Executing command: %s", " ".join(full_command))
+
     p = subprocess.Popen(
-        [config["snapraid-btrfs"]["executable"]] + snapraid_btrfs_arguments + [command] + snapraid_arguments,
+        full_command,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         universal_newlines=True,

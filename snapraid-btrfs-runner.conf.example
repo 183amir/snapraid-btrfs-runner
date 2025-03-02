@@ -24,6 +24,8 @@ config = snapraid.conf
 deletethreshold = 40
 ; if you want touch to be ran each time
 touch = false
+; extra arguments to pass to the snapraid sync command
+sync_extra_args = 
 
 [logging]
 ; logfile to write to, leave empty to disable

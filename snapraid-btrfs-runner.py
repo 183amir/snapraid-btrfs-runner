@@ -235,6 +235,9 @@ def load_config(args):
     if args.cleanup is not None:
         config["snapraid-btrfs"]["cleanup"] = args.cleanup
 
+    if args.sync_extra_args is not None:
+        config["snapraid"]["sync_extra_args"] = args.sync_extra_args
+
 
 def setup_logger():
     log_format = logging.Formatter(
@@ -289,6 +292,13 @@ def main():
     parser.add_argument("-d", "--deletethreshold", type=int,
                         default=None, metavar='N',
                         help="Number of deletes to allow (overrides config) (deprecated, use --ignore-deletethreshold)")
+    parser.add_argument(
+        "--sync-extra-args",
+        type=str,
+        default=None,
+        metavar="ARGS",
+        help="Extra arguments to pass to snapraid sync command (overrides config)",
+    )
     args = parser.parse_args()
 
     if not os.path.exists(args.conf):
@@ -377,7 +387,39 @@ def run():
     else:
         logging.info("Running sync...")
         try:
-            snapraid_btrfs_command("sync", snapraid_btrfs_args = snapraid_btrfs_args_extend)
+            # Process extra sync arguments if provided
+            snapraid_sync_args = {}
+            if config["snapraid"]["sync_extra_args"]:
+                extra_args = config["snapraid"]["sync_extra_args"].split()
+                i = 0
+                while i < len(extra_args):
+                    arg = extra_args[i]
+                    if arg.startswith("--"):
+                        arg_name = arg[2:]  # Remove leading --
+                        if i + 1 < len(extra_args) and not extra_args[i + 1].startswith(
+                            "--"
+                        ):
+                            # If next element is a value (not starting with --)
+                            snapraid_sync_args[arg_name] = extra_args[i + 1]
+                            i += 2
+                        else:
+                            # Flag without value
+                            snapraid_sync_args[arg_name] = ""
+                            i += 1
+                    else:
+                        # Skip any non-flag arguments (shouldn't normally happen)
+                        i += 1
+
+                logging.info(
+                    "Using extra sync arguments: %s",
+                    config["snapraid"]["sync_extra_args"],
+                )
+
+            snapraid_btrfs_command(
+                "sync",
+                snapraid_args=snapraid_sync_args,
+                snapraid_btrfs_args=snapraid_btrfs_args_extend,
+            )
         except subprocess.CalledProcessError as e:
             logging.error(e)
             finish(False)
